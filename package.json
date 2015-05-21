@@ -1,0 +1,25 @@
+{
+  "name": "taskgarden",
+  "version": "0.0.420",
+  "description": "Cultivate your collaboration garden.",
+  "main": "index.js",
+  "scripts": {
+    "test": "water"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jayrbolton/taskgarden.git"
+  },
+  "keywords": [
+    "ffffffffuuuuu"
+  ],
+  "author": "jyd",
+  "license": "property of satan",
+  "bugs": {
+    "url": "https://github.com/jayrbolton/taskgarden/issues"
+  },
+  "homepage": "https://github.com/jayrbolton/taskgarden",
+  "dependencies": {
+    "express": "^4.12.4"
+  }
+}
