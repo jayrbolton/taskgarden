@@ -20,6 +20,7 @@
   },
   "homepage": "https://github.com/jayrbolton/taskgarden",
   "dependencies": {
-    "express": "^4.12.4"
+    "express": "^4.12.4",
+    "ejs": "2.3.3"
   }
 }
