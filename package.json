@@ -14,13 +14,20 @@
     "ffffffffuuuuu"
   ],
   "author": "jyd",
-  "license": "property of satan",
+  "license": "MIT",
   "bugs": {
     "url": "https://github.com/jayrbolton/taskgarden/issues"
   },
   "homepage": "https://github.com/jayrbolton/taskgarden",
   "dependencies": {
     "express": "^4.12.4",
-    "ejs": "2.3.3"
+    "baconjs": "0.7.70",
+    "d3": "3.5.6",
+    "lodash": "3.10.0"
+  },
+  "devDependencies": {
+    "ejs": "2.3.3",
+    "browserify": "11.0.0",
+    "watchify": "3.3.0"
   }
 }
