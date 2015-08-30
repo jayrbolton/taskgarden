@@ -5,6 +5,7 @@ module.exports = formToObj
 var _ = require('lodash')
 
 function formToObj(form) {
+ if(form.currentTarget) form = form.currentTarget
  var obj = {}
 	_.each(form.querySelectorAll('input'), function(input) {
   obj[input.getAttribute('name')] = input.value
