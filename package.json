@@ -21,8 +21,7 @@
   "homepage": "https://github.com/jayrbolton/taskgarden",
   "dependencies": {
     "express": "^4.12.4",
-    "baconjs": "0.7.70",
-    "d3": "3.5.6",
+    "virtual-dom": "2.1.1",
     "lodash": "3.10.0"
   },
   "devDependencies": {
