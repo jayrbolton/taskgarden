@@ -1,82 +1,130 @@
-var d3 = require('d3')
-var Bacon = require('baconjs').Bacon
-var _ = require('lodash')
+var el = require('virtual-dom/h')
+var view = require('./vvvview/index')
 
+// functional utilities
 var formToObj = require('./formToObj')
 var ordinalize = require('./ordinalize')
-var interpolateText = require('./interpolateText')
+var asPercentage = require('./asPercentage')
+var secondsToMinutes = require('./secondsToMinutes')
 
 // Using a convention with some prefixes based on types
 // eX is an element named 'X'
 // sX is a bacon stream named 'X'
 // cX is a function that renders elements with d3 (c for component)
 
+//// components
 
-// Components
-
-function cNewButton(count) {
-  d3.select('.js-NewButton').text('Add ' + ordinalize(count+1) + ' item')
-}
-
-function cEmptyMessage(el) {
-  return function(count) {
-    if(count > 0) el.style.display = 'none'
-    else el.style.display = ''
+function app(state) {
+  if(state.pomodoro) {
+    return pomProgress(state.pomodoro)
   }
+  return el('.wrapper', [
+    newTodoForm(state.items.length),
+    itemsQueue(state.items)
+  ])
 }
 
-function cTotalCount(count) {
-  d3.select('.js-TotalCount').text(' - ' + count + ' total')
+// Display a giant progress bar of how far into your pomodoro you are
+function pomProgress(pomodoro) {
+  return el('.pomProgress', [
+    el('p', ["focus on ", el('strong', pomodoro.name), " for ", secondsToMinutes(1500 - pomodoro.progress), " more minutes"]),
+    el('button', {onclick: stopPomodoro}, "squash tomato"),
+    el('.pomProgress-bar', {style: {width: asPercentage(pomodoro.progress, 1500)}})
+  ])
 }
 
-function cItemList(items) {
-  var lis = d3.select('.js-ItemList').selectAll('li').data(items).text(get('name'))
-  lis.enter().append('li').text(get('name'))
-  lis.exit().remove()
+
+// Create a new todo item from a simple form
+function newTodoForm(count) {
+  return el('form', {onsubmit: addItem}, [
+    el('input', {name: 'name', type: 'text', placeholder: 'What needs to be done?', required: true}),
+    el('button', {component: 'newTodo_btn'}, 'Add ' + ordinalize(count+1) + ' item')
+  ])
 }
 
-function cFinishedList(items) {
-  var lis = d3.select('.js-FinishedList').selectAll('li').data(items).text(get('name'))
-  lis.enter().append('li').text(get('name'))
-  lis.exit().remove()
-}
 
-// Streams
-
-var sTodos = Bacon.fromEvent(q('.js-NewItemForm'), 'submit')
- .doAction('.preventDefault')
- .map('.currentTarget')
-
-// Convert event streams into a total count of items
-var sCount = sTodos.map(1).scan(0, add)
-sCount.onValue(cNewButton)
-sCount.onValue(cTotalCount)
-sCount.onValue(cEmptyMessage(q('.js-EmptyQueue')))
-
-// Convert event streams into an array of item objects, set to app.items
-sTodos
-  .map(formToObj)
-  .scan([], shiftEach)
-  .onValue(cItemList)
-
-var sFinished = Bacon.fromArray([])
-sFinished.onValue(cFinishedList)
-sFinishedCount = sFinished.map(1).scan(0, add)
-sFinishedCount.onValue(cEmptyMessage(q('.js-NoneFinished')))
-
-// Shift each new todo item to the beginning of the list
-function shiftEach(arr, val) { return [val].concat(arr) }
-
-function add(x,y) {return x + y}
-
-// Return a function that will retrieve the given property from an object
-// useful for method chaining, like .text(get('name')) where you're getting 'item.name'
-function get(prop) {
-  return function(obj) {
-    return obj[prop]
+// Display all your todo items
+function itemsQueue(items) {
+  if(items.length === 0) {
+    var content = el('p', 'your slate is clean!')
+  } else {
+    var content = el('table', {class: 'queueTable'}, el('tbody', items.map(itemRow)))
   }
+
+  return el('div', [
+    el('h2', [items.filter(isFinished).length, ' / ', items.length + ' completed']),
+    content
+  ])
 }
 
-// Some very lazy shortcuts...
-function q(str) {return document.querySelector(str)}
-function qa(str) {return document.querySelectorAll(str)}
+// Display a single todo item
+function itemRow(item) {
+  var status = item.finished ? 'is-finished' : 'is-pending'
+  return el('tr', { className: status}, [
+    el('td', el('input', { onchange: toggleStatus(item), type: 'checkbox', checked: item.finished})),
+    el('td', item.name),
+    el('td', item.finished ?
+      el('button', {onclick: removeItem(item)}, 'delete') :
+      el('button', {onclick: startPomodoro(item)}, 'start pomodoro')),
+    el('td', pomIcons(item))
+  ])
+}
+
+function pomIcons(item) {
+  if(!item.pomCount) return
+  var icons = []
+  for(var i = 0; i < item.pomCount; ++i) {
+    icons.push(el('.i-tomato'))
+  }
+  return icons
+}
+
+// Initialize appView
+var appView = view(document.body, app, {
+	defaultState: {items: [{name: 'Do the dishes!'}]},
+	cacheState: 'appView'
+})
+
+
+function isFinished(item) { return item.finished}
+
+//// events
+
+function removeItem(item) { return function(ev) {
+  var ind = appView.state.items.indexOf(item)
+  appView.state.items.splice(ind, 1)
+  appView.render()
+}}
+
+function startPomodoro(item) { return function(ev) {
+  var pom = appView.state.pomodoro = {progress: 0, name: item.name}
+  pom.intervalID = setInterval(function() {
+    if(pom.progress >= 1500) {
+      item.pomCount = item.pomCount || 0
+      ++item.pomCount
+      stopPomodoro()
+    }
+    ++pom.progress
+    appView.render()
+  }, 1000)
+  appView.render()
+}}
+
+function stopPomodoro() {
+  clearInterval(appView.state.pomodoro.intervalID)
+  appView.state.pomodoro = null
+  appView.render()
+}
+
+function toggleStatus(item) { return function(event) {
+  item.finished = !item.finished
+  appView.render()
+}}
+
+function addItem(ev) {
+  ev.preventDefault()
+  var item = formToObj(ev.currentTarget)
+  appView.state.items.push(item)
+  appView.render()
+}
+
